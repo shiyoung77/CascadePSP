@@ -76,14 +76,14 @@ def mask_to_rle(mask) -> dict:
     return rle
 
 
-def refine_video(video_path):
+def refine_video(video_path, stride=1):
     refiner = refine.Refiner(device='cuda:0')  # device can also be 'cpu'
 
     output_folder = os.path.join(video_path, 'annotations', 'instance_annotations')
     os.makedirs(output_folder, exist_ok=True)
 
     color_files = sorted(os.listdir(os.path.join(video_path, 'color')))
-    for i in tqdm(range(0, len(color_files), 10)):
+    for i in tqdm(range(0, len(color_files), stride)):
         color_file = color_files[i]
         prefix = color_file.split('-')[0]
         color_path = os.path.join(video_path, 'color', color_file)
@@ -157,8 +157,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--dataset", type=str, default='/home/lsy/dataset/CoRL_real')
     parser.add_argument("-v", "--videos", type=str, default=["0001"], nargs="+")
-    parser.add_argument("--stride", type=int, default=1)
-    parser.add_argument("-s", "--save", action="store_true")
+    parser.add_argument("--stride", type=int, default=10)
     args = parser.parse_args()
 
     with open(os.path.join(args.dataset, 'metadata.json'), 'r') as fp:
@@ -167,10 +166,10 @@ def main():
     metadata.set(thing_classes=meta['thing_classes'])
     metadata.set(thing_colors=meta['thing_colors'])
 
-    args.videos = [f"{i:04d}" for i in range(1, 2)]
+    args.videos = [f"{i:04d}" for i in range(1, 31)]
     for video in args.videos:
         video_path = os.path.join(args.dataset, video)
-        refine_video(video_path)
+        refine_video(video_path, args.stride)
         visualize_video_annotations(video_path, metadata)
 
 
