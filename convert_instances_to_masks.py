@@ -16,8 +16,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--dataset", type=str, default='/home/lsy/dataset/CoRL_real')
     parser.add_argument("-v", "--videos", type=str, default=["0001"], nargs="+")
-    parser.add_argument("--annotation_folder", type=str, default="annotations/instance_annotations")
-    parser.add_argument("--output_folder", type=str, default="annotations/colored_masks")
+    parser.add_argument("--annotation_folder", type=str, default="annotations/instances")
+    parser.add_argument("--output_folder", type=str, default="annotations/refined_masks")
     args = parser.parse_args()
 
     args.videos = [f"{i:04d}" for i in range(1, 2)]
@@ -25,6 +25,9 @@ def main():
         video_folder = os.path.join(args.dataset, video)
         annotation_folder = os.path.join(video_folder, args.annotation_folder)
         annotation_files = sorted([f for f in os.listdir(annotation_folder) if f.endswith('json')])
+        
+        output_folder = os.path.join(video_folder, args.output_folder)
+        os.makedirs(output_folder, exist_ok=True)
 
         for annotation_file in annotation_files:
             annotation_path = os.path.join(annotation_folder, annotation_file)
@@ -45,7 +48,7 @@ def main():
             prefix = annotation_file.split('-')[0]
             combined_mask = Image.fromarray(combined_mask).convert('P')
             combined_mask.putpalette(_palette)
-            combined_mask.save(os.path.join(annotation_folder, f"{prefix}-mask.png"))
+            combined_mask.save(os.path.join(output_folder, f"{prefix}-mask.png"))
 
 
 if __name__ == "__main__":

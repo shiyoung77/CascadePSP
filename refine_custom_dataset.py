@@ -7,8 +7,9 @@ import cv2
 import torch
 import pycocotools
 import matplotlib.pyplot as plt
-import segmentation_refinement as refine
+import segmentation_refinement as refine  # pip install segmentation-refinement
 from tqdm import tqdm
+from PIL import Image
 from detectron2.utils.visualizer import Visualizer, ColorMode, BoxMode
 from detectron2.data import MetadataCatalog
 
@@ -79,7 +80,7 @@ def mask_to_rle(mask) -> dict:
 def refine_video(video_path, stride=1):
     refiner = refine.Refiner(device='cuda:0')  # device can also be 'cpu'
 
-    output_folder = os.path.join(video_path, 'annotations', 'instance_annotations')
+    output_folder = os.path.join(video_path, 'annotations', 'instances')
     os.makedirs(output_folder, exist_ok=True)
 
     color_files = sorted(os.listdir(os.path.join(video_path, 'color')))
@@ -87,9 +88,11 @@ def refine_video(video_path, stride=1):
         color_file = color_files[i]
         prefix = color_file.split('-')[0]
         color_path = os.path.join(video_path, 'color', color_file)
-        mask_path = os.path.join(video_path, 'annotations', 'masks', f'{prefix}-mask.png')
         bgr_im = cv2.imread(color_path)
-        mask = cv2.imread(mask_path, cv2.IMREAD_UNCHANGED)
+
+        mask_path = os.path.join(video_path, 'annotations', 'masks', f'{prefix}-mask.png')
+        mask = np.asarray(Image.open(mask_path))
+        # mask = cv2.imread(mask_path, cv2.IMREAD_UNCHANGED)
 
         instance = dict()
         instance['file_name'] = os.path.join(os.path.basename(video_path), 'color', color_file)
@@ -103,11 +106,12 @@ def refine_video(video_path, stride=1):
                 continue
 
             obj_mask = (mask == id).astype(np.uint8) * 255
-            refined_mask = refiner.refine(bgr_im, obj_mask, fast=True)
-            refined_mask[refined_mask < 220] = 0
-            refined_mask = refiner.refine(bgr_im, refined_mask, fast=True)
-            refined_mask[refined_mask < 220] = 0
-            refined_mask = refiner.refine(bgr_im, refined_mask, fast=False)
+            # refined_mask = refiner.refine(bgr_im, obj_mask, fast=True)
+            # refined_mask[refined_mask < 220] = 0
+            # refined_mask = refiner.refine(bgr_im, refined_mask, fast=True)
+            # refined_mask[refined_mask < 220] = 0
+            # refined_mask = refiner.refine(bgr_im, refined_mask, fast=False)
+            refined_mask = refiner.refine(bgr_im, obj_mask, fast=False)
             refined_mask = refined_mask.astype(bool)
 
             ys, xs = refined_mask.nonzero()
@@ -129,7 +133,7 @@ def refine_video(video_path, stride=1):
 
 def visualize_video_annotations(video_path, metadata):
     color_files = sorted(os.listdir(os.path.join(video_path, 'color')))
-    annotation_folder = os.path.join(video_path, 'annotations', 'instance_annotations')
+    annotation_folder = os.path.join(video_path, 'annotations', 'instances')
     for i in tqdm(range(0, len(color_files), 10)):
         color_file = color_files[i]
         prefix = color_file.split('-')[0]
@@ -166,7 +170,7 @@ def main():
     metadata.set(thing_classes=meta['thing_classes'])
     metadata.set(thing_colors=meta['thing_colors'])
 
-    args.videos = [f"{i:04d}" for i in range(1, 31)]
+    # args.videos = [f"{i:04d}" for i in range(1, 31)]
     for video in args.videos:
         video_path = os.path.join(args.dataset, video)
         refine_video(video_path, args.stride)
