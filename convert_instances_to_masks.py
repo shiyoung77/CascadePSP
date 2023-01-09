@@ -3,11 +3,9 @@ import json
 import argparse
 
 import numpy as np
-import cv2
 import pycocotools.mask
-import matplotlib.pyplot as plt
-from numba import njit
 from PIL import Image
+from tqdm import tqdm
 
 from add_palette_to_mask import _palette
 
@@ -20,16 +18,16 @@ def main():
     parser.add_argument("--output_folder", type=str, default="annotations/refined_masks")
     args = parser.parse_args()
 
-    args.videos = [f"{i:04d}" for i in range(1, 2)]
+    args.videos = [f"{i:04d}" for i in range(1, 31)]
     for video in args.videos:
         video_folder = os.path.join(args.dataset, video)
         annotation_folder = os.path.join(video_folder, args.annotation_folder)
         annotation_files = sorted([f for f in os.listdir(annotation_folder) if f.endswith('json')])
-        
+
         output_folder = os.path.join(video_folder, args.output_folder)
         os.makedirs(output_folder, exist_ok=True)
 
-        for annotation_file in annotation_files:
+        for annotation_file in tqdm(annotation_files):
             annotation_path = os.path.join(annotation_folder, annotation_file)
             with open(annotation_path, 'r') as fp:
                 metadata = json.load(fp)

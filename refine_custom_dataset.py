@@ -77,7 +77,7 @@ def mask_to_rle(mask) -> dict:
     return rle
 
 
-def refine_video(video_path, stride=1):
+def refine_video(video_path, stride=1, metadata=None):
     refiner = refine.Refiner(device='cuda:0')  # device can also be 'cpu'
 
     output_folder = os.path.join(video_path, 'annotations', 'instances')
@@ -130,6 +130,13 @@ def refine_video(video_path, stride=1):
         with open(os.path.join(output_folder, f'{prefix}-ann.json'), 'w') as fp:
             json.dump(instance, fp)
 
+        rgb_im = cv2.cvtColor(bgr_im, cv2.COLOR_BGR2RGB)
+        visualizer = CustomVisualizer(rgb_im, metadata=metadata, instance_mode=ColorMode.SEGMENTATION)
+        out = visualizer.draw_dataset_dict(instance)
+        vis_rgb_im = out.get_image()
+        vis_bgr_im = cv2.cvtColor(vis_rgb_im, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(os.path.join(output_folder, f'{prefix}-vis.jpg'), vis_bgr_im)
+
 
 def visualize_video_annotations(video_path, metadata):
     color_files = sorted(os.listdir(os.path.join(video_path, 'color')))
@@ -149,7 +156,6 @@ def visualize_video_annotations(video_path, metadata):
         out = visualizer.draw_dataset_dict(instance)
         vis_rgb_im = out.get_image()
         vis_bgr_im = cv2.cvtColor(vis_rgb_im, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(os.path.join(annotation_folder, f'{prefix}-vis.jpg'), vis_bgr_im)
         cv2.imshow("annotation", vis_bgr_im)
         key = cv2.waitKey(1)
         if key == ord('q'):
@@ -170,10 +176,10 @@ def main():
     metadata.set(thing_classes=meta['thing_classes'])
     metadata.set(thing_colors=meta['thing_colors'])
 
-    # args.videos = [f"{i:04d}" for i in range(1, 31)]
+    args.videos = [f"{i:04d}" for i in range(1, 31)]
     for video in args.videos:
         video_path = os.path.join(args.dataset, video)
-        refine_video(video_path, args.stride)
+        refine_video(video_path, args.stride, metadata)
         visualize_video_annotations(video_path, metadata)
 
 
